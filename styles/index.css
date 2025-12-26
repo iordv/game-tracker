@@ -1455,7 +1455,7 @@ body {
    ============================================ */
 .nav-dock-container {
   position: fixed;
-  bottom: calc(var(--safe-bottom) + var(--space-lg));
+  bottom: max(env(safe-area-inset-bottom, 0px), 20px);
   left: 50%;
   transform: translateX(-50%);
   display: flex;
@@ -1463,14 +1463,6 @@ body {
   gap: var(--space-sm);
   z-index: 1000;
   transition: transform var(--transition-base), opacity var(--transition-base);
-}
-
-@supports (padding-bottom: env(safe-area-inset-bottom)) {
-  @media all and (display-mode: standalone) {
-    .nav-dock-container {
-      bottom: calc(env(safe-area-inset-bottom, 34px) + var(--space-lg));
-    }
-  }
 }
 
 .nav-dock-container.hidden {
