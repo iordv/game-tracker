@@ -1518,7 +1518,17 @@ body {
   align-items: center;
   gap: var(--space-sm);
   z-index: 1000;
-  transition: all var(--transition-base);
+  /* Only transition transform and opacity, NOT bottom - prevents jumping on safe-area calculation */
+  transition: transform var(--transition-base), opacity var(--transition-base);
+}
+
+/* PWA standalone mode - ensure consistent positioning immediately */
+@supports (padding-bottom: env(safe-area-inset-bottom)) {
+  @media all and (display-mode: standalone) {
+    .nav-dock-container {
+      bottom: calc(env(safe-area-inset-bottom, 34px) + var(--space-lg));
+    }
+  }
 }
 
 .nav-dock-container.hidden {
