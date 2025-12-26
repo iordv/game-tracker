@@ -719,7 +719,7 @@ body {
 }
 
 /* ============================================
-   Timeline View - Apple Style
+   Timeline View - Modern Social Feed Style
    ============================================ */
 .view--timeline .view-header {
   margin-bottom: var(--space-lg);
@@ -743,140 +743,193 @@ body {
 }
 
 .timeline-separator {
-  font-size: var(--font-size-xs);
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 1.5px;
-  color: var(--accent-primary);
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  color: var(--text-secondary);
   margin-top: var(--space-lg);
   margin-bottom: var(--space-sm);
-  padding-left: var(--space-lg);
+  padding: 0 var(--space-xs);
+}
+
+.timeline-separator::before,
+.timeline-separator::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(to right, transparent, rgba(255, 255, 255, 0.08), transparent);
 }
 
 .timeline-separator:first-child {
   margin-top: 0;
 }
 
+/* Timeline Card - Social Feed Style */
 .timeline-entry {
-  display: flex;
-  gap: var(--space-md);
+  position: relative;
   cursor: pointer;
-  transition: transform 0.25s ease;
+  border-radius: var(--radius-xl);
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  transition: all 0.3s cubic-bezier(0.25, 0.1, 0.25, 1);
 }
 
 .timeline-entry:hover {
-  transform: translateX(6px);
+  transform: translateY(-4px) scale(1.01);
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 159, 67, 0.2);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.3),
+    0 0 0 1px rgba(255, 159, 67, 0.1);
 }
 
-.timeline-entry__indicator {
-  width: 12px;
-  height: 12px;
-  border-radius: 50%;
-  flex-shrink: 0;
-  margin-top: 22px;
+.timeline-entry:active {
+  transform: translateY(-2px) scale(0.99);
+}
+
+/* Hero Image Banner */
+.timeline-entry__banner {
   position: relative;
+  width: 100%;
+  height: 140px;
+  overflow: hidden;
 }
 
-.timeline-entry__indicator::after {
-  content: '';
+.timeline-entry__banner-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.4s ease;
+}
+
+.timeline-entry:hover .timeline-entry__banner-image {
+  transform: scale(1.08);
+}
+
+.timeline-entry__banner-overlay {
   position: absolute;
-  top: 16px;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 2px;
-  height: calc(100% + 20px);
-  background: linear-gradient(to bottom, var(--glass-border), transparent);
+  inset: 0;
+  background: linear-gradient(to top,
+    rgba(15, 15, 15, 1) 0%,
+    rgba(15, 15, 15, 0.4) 50%,
+    transparent 100%);
 }
 
-.timeline-entry:last-child .timeline-entry__indicator::after {
-  display: none;
+/* Type Indicator Strip */
+.timeline-entry__type-strip {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
 }
 
-.timeline-entry__indicator--patch {
-  background: var(--accent-blue);
-  box-shadow: 0 0 16px var(--accent-blue);
+.timeline-entry__type-strip--patch {
+  background: linear-gradient(90deg, var(--accent-blue), #38bdf8);
 }
 
-.timeline-entry__indicator--dlc {
-  background: var(--accent-primary);
-  box-shadow: 0 0 16px rgba(255, 159, 67, 0.6);
+.timeline-entry__type-strip--dlc {
+  background: linear-gradient(90deg, var(--gradient-warm-start), var(--gradient-warm-end));
 }
 
-.timeline-entry__indicator--release {
-  background: var(--accent-success);
-  box-shadow: 0 0 16px var(--accent-success);
+.timeline-entry__type-strip--release {
+  background: linear-gradient(90deg, var(--accent-success), #2dd4bf);
 }
 
-.timeline-entry__indicator--news {
-  background: var(--text-secondary);
-  box-shadow: 0 0 12px rgba(255, 255, 255, 0.3);
+.timeline-entry__type-strip--news {
+  background: linear-gradient(90deg, var(--text-secondary), var(--text-tertiary));
 }
 
+/* Content Area */
 .timeline-entry__content {
-  flex: 1;
   padding: var(--space-md);
-  border-radius: var(--radius-lg);
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(255, 255, 255, 0.05);
-  transition: all 0.25s ease;
+  padding-top: var(--space-sm);
 }
 
-.timeline-entry:hover .timeline-entry__content {
-  background: rgba(255, 255, 255, 0.06);
-  border-color: rgba(255, 159, 67, 0.15);
-}
-
+/* Header with Avatar and Meta */
 .timeline-entry__header {
   display: flex;
+  align-items: center;
   gap: var(--space-md);
   margin-bottom: var(--space-sm);
 }
 
 .timeline-entry__game-image {
-  width: 56px;
-  height: 56px;
+  width: 44px;
+  height: 44px;
   border-radius: var(--radius-md);
   object-fit: cover;
   flex-shrink: 0;
+  border: 2px solid rgba(255, 255, 255, 0.1);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
 }
 
-.timeline-entry__info {
+.timeline-entry__meta {
   flex: 1;
   min-width: 0;
+}
+
+.timeline-entry__game-name {
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.timeline-entry__date {
+  font-size: var(--font-size-xs);
+  color: var(--text-tertiary);
+  margin-top: 2px;
 }
 
 .timeline-entry__badge {
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  padding: 3px 8px;
+  padding: 5px 10px;
   font-size: 10px;
   font-weight: 700;
   text-transform: uppercase;
+  letter-spacing: 0.5px;
   border-radius: var(--radius-full);
-  margin-bottom: var(--space-xs);
+  flex-shrink: 0;
 }
 
 .timeline-entry__badge--patch {
   background: rgba(96, 165, 250, 0.15);
   color: var(--accent-blue);
+  border: 1px solid rgba(96, 165, 250, 0.25);
 }
 
 .timeline-entry__badge--dlc {
   background: rgba(255, 159, 67, 0.15);
   color: var(--accent-primary);
+  border: 1px solid rgba(255, 159, 67, 0.25);
 }
 
 .timeline-entry__badge--release {
   background: rgba(52, 211, 153, 0.15);
   color: var(--accent-success);
+  border: 1px solid rgba(52, 211, 153, 0.25);
 }
 
+.timeline-entry__badge--news {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text-secondary);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* Title */
 .timeline-entry__title {
-  font-size: var(--font-size-base);
-  font-weight: 600;
+  font-size: var(--font-size-md);
+  font-weight: 700;
   color: var(--text-primary);
+  line-height: 1.4;
+  margin-bottom: var(--space-xs);
   display: -webkit-box;
   -webkit-line-clamp: 2;
   line-clamp: 2;
@@ -884,28 +937,66 @@ body {
   overflow: hidden;
 }
 
-.timeline-entry__game-name {
-  font-size: var(--font-size-sm);
-  color: var(--accent-primary);
-  margin-top: 2px;
-  font-weight: 500;
-}
-
+/* Description */
 .timeline-entry__description {
   font-size: var(--font-size-sm);
-  color: var(--text-tertiary);
-  line-height: 1.5;
+  color: var(--text-secondary);
+  line-height: 1.6;
   display: -webkit-box;
-  -webkit-line-clamp: 2;
-  line-clamp: 2;
+  -webkit-line-clamp: 3;
+  line-clamp: 3;
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
 
-.timeline-entry__date {
+/* Footer Actions */
+.timeline-entry__footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: var(--space-md);
+  padding-top: var(--space-sm);
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.timeline-entry__action {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
   font-size: var(--font-size-xs);
   color: var(--text-tertiary);
-  margin-top: var(--space-sm);
+  transition: color 0.2s ease;
+}
+
+.timeline-entry__action:hover {
+  color: var(--accent-primary);
+}
+
+.timeline-entry__action svg {
+  width: 16px;
+  height: 16px;
+}
+
+/* Compact variant for smaller updates */
+.timeline-entry--compact {
+  border-radius: var(--radius-lg);
+}
+
+.timeline-entry--compact .timeline-entry__banner {
+  display: none;
+}
+
+.timeline-entry--compact .timeline-entry__content {
+  padding: var(--space-md);
+}
+
+.timeline-entry--compact .timeline-entry__title {
+  font-size: var(--font-size-base);
+}
+
+/* Remove old indicator styles */
+.timeline-entry__indicator {
+  display: none;
 }
 
 .error-text {
@@ -1718,17 +1809,17 @@ body {
 
 .skeleton--card {
   aspect-ratio: 3/4;
-  border-radius: var(--radius-lg);
+  border-radius: var(--radius-xl);
 }
 
 .skeleton--result {
   height: 88px;
-  border-radius: var(--radius-lg);
+  border-radius: var(--radius-xl);
 }
 
 .skeleton--update {
-  height: 120px;
-  border-radius: var(--radius-lg);
+  height: 220px;
+  border-radius: var(--radius-xl);
 }
 
 /* ============================================

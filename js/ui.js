@@ -671,25 +671,38 @@ const UI = {
                     currentDateSection = dateSection;
                 }
 
-                // Add timeline entry
+                // Get badge text based on type
+                const badgeText = update.type === 'patch' ? 'Patch' : update.type === 'dlc' ? 'DLC' : update.type === 'release' ? 'Release' : 'News';
+
+                // Add timeline entry - modern social feed card style
                 html += `
-                    <div class="timeline-entry" data-game-id="${update.game.id}">
-                        <div class="timeline-entry__indicator timeline-entry__indicator--${update.type}"></div>
-                        <div class="timeline-entry__content glass-material">
-                            <div class="timeline-entry__header">
-                                <img class="timeline-entry__game-image" src="${update.game.image}" alt="${update.game.name}">
-                                <div class="timeline-entry__info">
-                                    <span class="timeline-entry__badge timeline-entry__badge--${update.type}">
-                                        ${update.type === 'patch' ? '🔧 Patch' : update.type === 'dlc' ? '📦 DLC' : '🚀 Release'}
-                                    </span>
-                                    <h3 class="timeline-entry__title">${this.escapeHtml(update.title)}</h3>
-                                    <p class="timeline-entry__game-name">${this.escapeHtml(update.game.name)}</p>
-                                </div>
-                            </div>
-                            ${update.content ? `<p class="timeline-entry__description">${this.escapeHtml(update.content)}</p>` : ''}
-                            <p class="timeline-entry__date">${this.formatDate(update.date)}</p>
+                    <article class="timeline-entry" data-game-id="${update.game.id}">
+                        <div class="timeline-entry__type-strip timeline-entry__type-strip--${update.type}"></div>
+                        <div class="timeline-entry__banner">
+                            <img class="timeline-entry__banner-image" src="${update.game.image}" alt="${this.escapeHtml(update.game.name)}" loading="lazy">
+                            <div class="timeline-entry__banner-overlay"></div>
                         </div>
-                    </div>
+                        <div class="timeline-entry__content">
+                            <div class="timeline-entry__header">
+                                <img class="timeline-entry__game-image" src="${update.game.image}" alt="${this.escapeHtml(update.game.name)}" loading="lazy">
+                                <div class="timeline-entry__meta">
+                                    <p class="timeline-entry__game-name">${this.escapeHtml(update.game.name)}</p>
+                                    <p class="timeline-entry__date">${this.formatDate(update.date)}</p>
+                                </div>
+                                <span class="timeline-entry__badge timeline-entry__badge--${update.type}">${badgeText}</span>
+                            </div>
+                            <h3 class="timeline-entry__title">${this.escapeHtml(update.title)}</h3>
+                            ${update.content ? `<p class="timeline-entry__description">${this.escapeHtml(update.content)}</p>` : ''}
+                            <div class="timeline-entry__footer">
+                                <span class="timeline-entry__action">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="m9 18 6-6-6-6"/>
+                                    </svg>
+                                    View Details
+                                </span>
+                            </div>
+                        </div>
+                    </article>
                 `;
             });
 
