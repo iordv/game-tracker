@@ -4,8 +4,8 @@
   "description": "Track your favorite games, updates, patches and DLC",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#0a0a0f",
-  "theme_color": "#0a0a0f",
+  "background_color": "#0f0f0f",
+  "theme_color": "#ff6b35",
   "orientation": "portrait-primary",
   "icons": [
     {
