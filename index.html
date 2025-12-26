@@ -96,11 +96,15 @@
 
             <!-- Timeline View -->
             <section class="view view--timeline" id="timelineView">
-                <header class="view-header">
-                    <h1 class="view-title">Timeline</h1>
-                    <p class="view-subtitle">Recent updates from your games</p>
-                </header>
+                <!-- Game Highlights - Horizontal scroll of tracked games -->
+                <div class="timeline-highlights" id="timelineHighlights">
+                    <h2 class="timeline-highlights__title">Your Games</h2>
+                    <div class="timeline-highlights__scroll" id="highlightsScroll">
+                        <!-- Circular game covers will be dynamically inserted -->
+                    </div>
+                </div>
 
+                <!-- Timeline Feed - Modern social cards -->
                 <div class="timeline-feed" id="timelineFeed">
                     <!-- Timeline entries will be dynamically inserted -->
                 </div>

@@ -47,6 +47,8 @@ const UI = {
             emptySearchBtn: document.getElementById('emptySearchBtn'),
 
             // Timeline
+            timelineHighlights: document.getElementById('timelineHighlights'),
+            highlightsScroll: document.getElementById('highlightsScroll'),
             timelineFeed: document.getElementById('timelineFeed'),
             timelineEmpty: document.getElementById('timelineEmpty'),
 
@@ -454,6 +456,11 @@ const UI = {
         return games.map(game => `
             <div class="game-card" data-game-id="${game.id}">
                 ${game.hasNewUpdate ? '<span class="game-card__badge">Update</span>' : ''}
+                <div class="game-card__favorite ${isPinned ? 'visible' : ''}">
+                    <svg viewBox="0 0 24 24" fill="currentColor">
+                        <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+                    </svg>
+                </div>
                 <img class="game-card__image" 
                      src="${game.image || ''}" 
                      alt="${game.name}"
@@ -462,45 +469,176 @@ const UI = {
                 <div class="game-card__content">
                     <h3 class="game-card__title">${this.escapeHtml(game.name)}</h3>
                 </div>
-                <button class="game-card__pin ${isPinned ? 'pinned' : ''}" 
-                        data-game-id="${game.id}" 
-                        aria-label="${isPinned ? 'Unpin from favorites' : 'Pin to favorites'}">
-                    <svg viewBox="0 0 24 24" fill="${isPinned ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="2">
-                        <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
-                    </svg>
-                </button>
             </div>
         `).join('');
     },
 
     /**
-     * Bind click events to game cards
+     * Bind touch events to game cards (long-press to favorite)
      * @param {HTMLElement} container - Container with game cards
      */
     bindGameCardEvents(container) {
         container.querySelectorAll('.game-card').forEach(card => {
-            // Card click - open detail
-            card.addEventListener('click', (e) => {
-                // Don't navigate if clicking pin button
-                if (e.target.closest('.game-card__pin')) return;
-                const gameId = parseInt(card.dataset.gameId);
-                this.openGameDetail(gameId);
+            let longPressTimer = null;
+            let isLongPress = false;
+            let touchStartX = 0;
+            let touchStartY = 0;
+
+            const startLongPress = (x, y) => {
+                touchStartX = x;
+                touchStartY = y;
+                isLongPress = false;
+
+                longPressTimer = setTimeout(() => {
+                    isLongPress = true;
+                    card.classList.add('long-pressing');
+
+                    // Haptic feedback
+                    if (navigator.vibrate) {
+                        navigator.vibrate(50);
+                    }
+
+                    // Toggle favorite
+                    const gameId = parseInt(card.dataset.gameId);
+                    const isPinned = Storage.togglePinGame(gameId);
+
+                    // Show feedback
+                    this.showToast(isPinned ? '⭐ Added to favorites!' : 'Removed from favorites');
+
+                    // Check if this is first favorite - show tutorial
+                    this.checkFirstFavoriteTutorial();
+
+                    // Re-render after short delay
+                    setTimeout(() => {
+                        card.classList.remove('long-pressing');
+                        this.renderSavedGames();
+                    }, 300);
+                }, 500); // 500ms for long press
+            };
+
+            const cancelLongPress = () => {
+                if (longPressTimer) {
+                    clearTimeout(longPressTimer);
+                    longPressTimer = null;
+                }
+                card.classList.remove('long-pressing');
+            };
+
+            const handleMove = (x, y) => {
+                // Cancel if moved too far
+                const deltaX = Math.abs(x - touchStartX);
+                const deltaY = Math.abs(y - touchStartY);
+                if (deltaX > 10 || deltaY > 10) {
+                    cancelLongPress();
+                }
+            };
+
+            // Touch events
+            card.addEventListener('touchstart', (e) => {
+                const touch = e.touches[0];
+                startLongPress(touch.clientX, touch.clientY);
+            }, { passive: true });
+
+            card.addEventListener('touchmove', (e) => {
+                const touch = e.touches[0];
+                handleMove(touch.clientX, touch.clientY);
+            }, { passive: true });
+
+            card.addEventListener('touchend', (e) => {
+                cancelLongPress();
+                // Only open detail if it wasn't a long press
+                if (!isLongPress) {
+                    const gameId = parseInt(card.dataset.gameId);
+                    this.openGameDetail(gameId);
+                }
+                isLongPress = false;
             });
 
-            // Add tilt effect
-            card.addEventListener('mousemove', (e) => Animations.tilt3D(card, e));
-            card.addEventListener('mouseleave', () => Animations.resetTilt(card));
+            card.addEventListener('touchcancel', () => {
+                cancelLongPress();
+                isLongPress = false;
+            });
+
+            // Mouse events (for desktop/testing)
+            card.addEventListener('mousedown', (e) => {
+                startLongPress(e.clientX, e.clientY);
+            });
+
+            card.addEventListener('mousemove', (e) => {
+                handleMove(e.clientX, e.clientY);
+            });
+
+            card.addEventListener('mouseup', () => {
+                cancelLongPress();
+                if (!isLongPress) {
+                    const gameId = parseInt(card.dataset.gameId);
+                    this.openGameDetail(gameId);
+                }
+                isLongPress = false;
+            });
+
+            card.addEventListener('mouseleave', () => {
+                cancelLongPress();
+            });
+
+            // Prevent context menu on long press
+            card.addEventListener('contextmenu', (e) => {
+                e.preventDefault();
+            });
+        });
+    },
+
+    /**
+     * Check if we should show first favorite tutorial
+     */
+    checkFirstFavoriteTutorial() {
+        const hasSeenTutorial = localStorage.getItem('gametracker_favorite_tutorial_seen');
+        if (!hasSeenTutorial) {
+            localStorage.setItem('gametracker_favorite_tutorial_seen', 'true');
+            // Tutorial was needed on first add - it's now been triggered
+        }
+    },
+
+    /**
+     * Show first game tutorial
+     */
+    showFirstGameTutorial() {
+        const hasSeenTutorial = localStorage.getItem('gametracker_favorite_tutorial_seen');
+        if (hasSeenTutorial) return;
+
+        // Create tutorial overlay
+        const overlay = document.createElement('div');
+        overlay.className = 'tutorial-overlay';
+        overlay.innerHTML = `
+            <div class="tutorial-modal glass-material">
+                <div class="tutorial-icon">👆</div>
+                <h3 class="tutorial-title">Long-press to Favorite</h3>
+                <p class="tutorial-text">Hold down on any game card to add it to your favorites. Favorites appear at the top of your library!</p>
+                <button class="btn btn--primary tutorial-dismiss">Got it!</button>
+            </div>
+        `;
+
+        document.body.appendChild(overlay);
+
+        // Animate in
+        requestAnimationFrame(() => {
+            overlay.classList.add('visible');
         });
 
-        // Pin button click handlers
-        container.querySelectorAll('.game-card__pin').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                e.stopPropagation();
-                const gameId = parseInt(btn.dataset.gameId);
-                const isPinned = Storage.togglePinGame(gameId);
-                this.showToast(isPinned ? 'Added to favorites!' : 'Removed from favorites');
-                this.renderSavedGames(); // Re-render to update sections
-            });
+        // Dismiss button
+        overlay.querySelector('.tutorial-dismiss').addEventListener('click', () => {
+            overlay.classList.remove('visible');
+            setTimeout(() => overlay.remove(), 300);
+            localStorage.setItem('gametracker_favorite_tutorial_seen', 'true');
+        });
+
+        // Dismiss on overlay click
+        overlay.addEventListener('click', (e) => {
+            if (e.target === overlay) {
+                overlay.classList.remove('visible');
+                setTimeout(() => overlay.remove(), 300);
+                localStorage.setItem('gametracker_favorite_tutorial_seen', 'true');
+            }
         });
     },
 
@@ -616,21 +754,26 @@ const UI = {
     },
 
     /**
-     * Render timeline view
+     * Render timeline view with game highlights and social feed cards
      */
     async renderTimeline() {
         const savedGames = Storage.getSavedGames();
 
         if (!savedGames.length) {
+            this.elements.timelineHighlights.classList.add('hidden');
             this.elements.timelineFeed.classList.add('hidden');
             this.elements.timelineEmpty.classList.remove('hidden');
             return;
         }
 
         this.elements.timelineEmpty.classList.add('hidden');
+        this.elements.timelineHighlights.classList.remove('hidden');
         this.elements.timelineFeed.classList.remove('hidden');
 
-        // Show loading
+        // Render game highlights
+        this.renderGameHighlights(savedGames);
+
+        // Show loading for feed
         this.elements.timelineFeed.innerHTML = this.renderSkeletons('update', 5);
 
         try {
@@ -671,8 +814,18 @@ const UI = {
                     currentDateSection = dateSection;
                 }
 
-                // Get badge text based on type
-                const badgeText = update.type === 'patch' ? 'Patch' : update.type === 'dlc' ? 'DLC' : update.type === 'release' ? 'Release' : 'News';
+                // Get badge text and icon based on type
+                const badgeConfig = {
+                    patch: { text: 'Patch', icon: '🔧' },
+                    dlc: { text: 'DLC', icon: '📦' },
+                    release: { text: 'Release', icon: '🚀' },
+                    news: { text: 'News', icon: '📰' }
+                };
+                const badge = badgeConfig[update.type] || badgeConfig.news;
+
+                // Generate random engagement numbers for demo
+                const likes = Math.floor(Math.random() * 5000) + 500;
+                const comments = Math.floor(Math.random() * 200) + 20;
 
                 // Add timeline entry - modern social feed card style
                 html += `
@@ -681,24 +834,36 @@ const UI = {
                         <div class="timeline-entry__banner">
                             <img class="timeline-entry__banner-image" src="${update.game.image}" alt="${this.escapeHtml(update.game.name)}" loading="lazy">
                             <div class="timeline-entry__banner-overlay"></div>
-                        </div>
-                        <div class="timeline-entry__content">
-                            <div class="timeline-entry__header">
+                            <div class="timeline-entry__header-overlay">
                                 <img class="timeline-entry__game-image" src="${update.game.image}" alt="${this.escapeHtml(update.game.name)}" loading="lazy">
                                 <div class="timeline-entry__meta">
                                     <p class="timeline-entry__game-name">${this.escapeHtml(update.game.name)}</p>
-                                    <p class="timeline-entry__date">${this.formatDate(update.date)}</p>
+                                    <p class="timeline-entry__date">${this.formatRelativeTime(update.date)}</p>
                                 </div>
-                                <span class="timeline-entry__badge timeline-entry__badge--${update.type}">${badgeText}</span>
+                                <span class="timeline-entry__badge timeline-entry__badge--${update.type}">${badge.text}</span>
                             </div>
+                        </div>
+                        <div class="timeline-entry__content">
                             <h3 class="timeline-entry__title">${this.escapeHtml(update.title)}</h3>
                             ${update.content ? `<p class="timeline-entry__description">${this.escapeHtml(update.content)}</p>` : ''}
                             <div class="timeline-entry__footer">
+                                <span class="timeline-entry__stat">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
+                                    </svg>
+                                    ${this.formatNumber(likes)}
+                                </span>
+                                <span class="timeline-entry__stat">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/>
+                                    </svg>
+                                    ${comments}
+                                </span>
                                 <span class="timeline-entry__action">
+                                    View Details
                                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                         <path d="m9 18 6-6-6-6"/>
                                     </svg>
-                                    View Details
                                 </span>
                             </div>
                         </div>
@@ -723,6 +888,80 @@ const UI = {
             console.error('Timeline error:', error);
             this.elements.timelineFeed.innerHTML = '<p class="error-text">Failed to load updates</p>';
         }
+    },
+
+    /**
+     * Render game highlights (circular game covers)
+     * @param {Array} games - Saved games
+     */
+    renderGameHighlights(games) {
+        // Check which games have recent updates
+        const gamesWithUpdates = new Set();
+        // For demo, randomly mark some games as having updates
+        games.forEach((game, index) => {
+            if (index % 2 === 0) gamesWithUpdates.add(game.id);
+        });
+
+        const html = games.map(game => `
+            <div class="game-highlight" data-game-id="${game.id}">
+                <div class="game-highlight__ring ${gamesWithUpdates.has(game.id) ? 'game-highlight__ring--active' : ''}">
+                    <img class="game-highlight__image" src="${game.image}" alt="${this.escapeHtml(game.name)}" loading="lazy">
+                    ${gamesWithUpdates.has(game.id) ? '<div class="game-highlight__dot"></div>' : ''}
+                </div>
+                <span class="game-highlight__name">${this.escapeHtml(game.name)}</span>
+            </div>
+        `).join('');
+
+        this.elements.highlightsScroll.innerHTML = html;
+
+        // Bind click events
+        this.elements.highlightsScroll.querySelectorAll('.game-highlight').forEach(highlight => {
+            highlight.addEventListener('click', () => {
+                const gameId = parseInt(highlight.dataset.gameId);
+                this.openGameDetail(gameId);
+            });
+        });
+
+        // Animate highlights
+        Animations.staggerFadeIn(this.elements.highlightsScroll.querySelectorAll('.game-highlight'), 50);
+    },
+
+    /**
+     * Format relative time (e.g., "2h ago", "3d ago")
+     * @param {string} dateString - Date string
+     * @returns {string} - Relative time string
+     */
+    formatRelativeTime(dateString) {
+        const date = new Date(dateString);
+        const now = new Date();
+        const diffMs = now - date;
+        const diffMins = Math.floor(diffMs / 60000);
+        const diffHours = Math.floor(diffMs / 3600000);
+        const diffDays = Math.floor(diffMs / 86400000);
+
+        if (diffMins < 60) {
+            return diffMins <= 1 ? 'Just now' : `${diffMins}m ago`;
+        } else if (diffHours < 24) {
+            return `${diffHours}h ago`;
+        } else if (diffDays < 7) {
+            return `${diffDays}d ago`;
+        } else {
+            return this.formatDate(dateString);
+        }
+    },
+
+    /**
+     * Format number with K/M suffix
+     * @param {number} num - Number to format
+     * @returns {string} - Formatted number
+     */
+    formatNumber(num) {
+        if (num >= 1000000) {
+            return (num / 1000000).toFixed(1) + 'M';
+        } else if (num >= 1000) {
+            return (num / 1000).toFixed(1) + 'K';
+        }
+        return num.toString();
     },
 
     /**
@@ -958,6 +1197,7 @@ const UI = {
         if (!this.currentGame) return;
 
         const isSaved = Storage.isGameSaved(this.currentGame.id);
+        const savedGamesCount = Storage.getSavedGames().length;
 
         if (isSaved) {
             Storage.removeGame(this.currentGame.id);
@@ -972,6 +1212,13 @@ const UI = {
             });
             this.elements.saveBtn.classList.add('saved');
             this.showToast('Added to library', 'success');
+
+            // Show tutorial if this is the first game
+            if (savedGamesCount === 0) {
+                setTimeout(() => {
+                    this.showFirstGameTutorial();
+                }, 500);
+            }
         }
 
         // Bounce animation
