@@ -291,6 +291,65 @@ const Storage = {
         if (data.preferences) {
             this.set(this.KEYS.PREFERENCES, data.preferences);
         }
+    },
+
+    /**
+     * Get last read timestamp for a game's updates
+     * @param {number} gameId - Game ID
+     * @returns {number} Timestamp of last read or 0
+     */
+    getLastReadTime(gameId) {
+        const readTimes = this.get('gametracker_read_updates') || {};
+        return readTimes[gameId] || 0;
+    },
+
+    /**
+     * Mark a game's updates as read
+     * @param {number} gameId - Game ID
+     */
+    markUpdatesAsRead(gameId) {
+        const readTimes = this.get('gametracker_read_updates') || {};
+        readTimes[gameId] = Date.now();
+        this.set('gametracker_read_updates', readTimes);
+
+        // Also update the game's hasNewUpdate flag
+        this.updateGame(gameId, { hasNewUpdate: false });
+    },
+
+    /**
+     * Check if a game has unread updates
+     * @param {number} gameId - Game ID
+     * @param {Array} updates - Updates for the game
+     * @returns {boolean} Has unread updates
+     */
+    hasUnreadUpdates(gameId, updates) {
+        if (!updates || updates.length === 0) return false;
+
+        const lastReadTime = this.getLastReadTime(gameId);
+        if (lastReadTime === 0) return true; // Never read
+
+        // Check if any update is newer than last read time
+        return updates.some(update => {
+            const updateTime = new Date(update.date).getTime();
+            return updateTime > lastReadTime;
+        });
+    },
+
+    /**
+     * Get unread updates for a game
+     * @param {number} gameId - Game ID
+     * @param {Array} updates - All updates for the game
+     * @returns {Array} Unread updates
+     */
+    getUnreadUpdates(gameId, updates) {
+        if (!updates || updates.length === 0) return [];
+
+        const lastReadTime = this.getLastReadTime(gameId);
+
+        return updates.filter(update => {
+            const updateTime = new Date(update.date).getTime();
+            return updateTime > lastReadTime;
+        });
     }
 };
 

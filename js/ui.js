@@ -666,14 +666,17 @@ const UI = {
                 return;
             }
 
+            // Cache updates for modal
+            this.carouselUpdates = updates;
+
             // Render slides
             this.elements.heroCarouselTrack.innerHTML = updates.map((update, index) => `
-                <div class="hero-slide ${index === 0 ? 'active' : ''}" data-game-id="${update.game.id}">
+                <div class="hero-slide ${index === 0 ? 'active' : ''}" data-game-id="${update.game.id}" data-update-index="${index}">
                     <div class="hero-slide__bg" style="background-image: url(${update.game.image})"></div>
                     <div class="hero-slide__overlay"></div>
                     <div class="hero-slide__content">
                         <span class="hero-slide__badge hero-slide__badge--${update.type}">
-                            ${update.type === 'patch' ? '🔧 Patch' : update.type === 'dlc' ? '📦 DLC' : '🚀 Release'}
+                            ${update.type === 'patch' ? '🔧 Patch' : update.type === 'dlc' ? '📦 DLC' : update.type === 'news' ? '📰 News' : '🚀 Release'}
                         </span>
                         <h2 class="hero-slide__title">${this.escapeHtml(update.title)}</h2>
                         <p class="hero-slide__game">${this.escapeHtml(update.game.name)}</p>
@@ -687,11 +690,15 @@ const UI = {
                 <button class="hero-carousel__dot ${index === 0 ? 'active' : ''}" data-slide="${index}"></button>
             `).join('');
 
-            // Bind slide clicks
+            // Bind slide clicks - open update modal
             this.elements.heroCarouselTrack.querySelectorAll('.hero-slide').forEach(slide => {
                 slide.addEventListener('click', () => {
-                    const gameId = parseInt(slide.dataset.gameId);
-                    this.openGameDetail(gameId);
+                    const updateIndex = parseInt(slide.dataset.updateIndex);
+                    const update = this.carouselUpdates[updateIndex];
+                    if (update) {
+                        // Show modal with just this update
+                        this.showUpdateModal(update.game, [update]);
+                    }
                 });
             });
 
@@ -894,31 +901,57 @@ const UI = {
      * Render game highlights (circular game covers)
      * @param {Array} games - Saved games
      */
-    renderGameHighlights(games) {
-        // Check which games have recent updates
-        const gamesWithUpdates = new Set();
-        // For demo, randomly mark some games as having updates
-        games.forEach((game, index) => {
-            if (index % 2 === 0) gamesWithUpdates.add(game.id);
-        });
+    async renderGameHighlights(games) {
+        // Fetch updates to determine which games have unread content
+        let gamesWithUnread = new Set();
 
-        const html = games.map(game => `
-            <div class="game-highlight" data-game-id="${game.id}">
-                <div class="game-highlight__ring ${gamesWithUpdates.has(game.id) ? 'game-highlight__ring--active' : ''}">
-                    <img class="game-highlight__image" src="${game.image}" alt="${this.escapeHtml(game.name)}" loading="lazy">
-                    ${gamesWithUpdates.has(game.id) ? '<div class="game-highlight__dot"></div>' : ''}
+        try {
+            // Check cached updates or fetch new ones
+            const allUpdates = await API.getRecentUpdatesForGames(games, 30);
+
+            // Cache updates by game
+            games.forEach(game => {
+                const gameUpdates = allUpdates.filter(u => u.game.id === game.id);
+                this.gameUpdatesCache[game.id] = gameUpdates;
+
+                // Check if game has unread updates
+                if (Storage.hasUnreadUpdates(game.id, gameUpdates)) {
+                    gamesWithUnread.add(game.id);
+                }
+            });
+        } catch (error) {
+            console.error('Error checking updates:', error);
+            // Fall back to checking hasNewUpdate flag
+            games.forEach(game => {
+                if (game.hasNewUpdate) {
+                    gamesWithUnread.add(game.id);
+                }
+            });
+        }
+
+        const html = games.map(game => {
+            const hasUnread = gamesWithUnread.has(game.id);
+            return `
+                <div class="game-highlight" data-game-id="${game.id}">
+                    <div class="game-highlight__ring ${hasUnread ? 'game-highlight__ring--active' : ''}">
+                        <img class="game-highlight__image" src="${game.image}" alt="${this.escapeHtml(game.name)}" loading="lazy">
+                        ${hasUnread ? '<div class="game-highlight__dot"></div>' : ''}
+                    </div>
+                    <span class="game-highlight__name">${this.escapeHtml(game.name)}</span>
                 </div>
-                <span class="game-highlight__name">${this.escapeHtml(game.name)}</span>
-            </div>
-        `).join('');
+            `;
+        }).join('');
 
         this.elements.highlightsScroll.innerHTML = html;
 
-        // Bind click events
+        // Bind click events - open update modal
         this.elements.highlightsScroll.querySelectorAll('.game-highlight').forEach(highlight => {
             highlight.addEventListener('click', () => {
                 const gameId = parseInt(highlight.dataset.gameId);
-                this.openGameDetail(gameId);
+                const game = games.find(g => g.id === gameId);
+                if (game) {
+                    this.openGameUpdateModal(game);
+                }
             });
         });
 
@@ -1324,6 +1357,152 @@ const UI = {
         const div = document.createElement('div');
         div.textContent = text;
         return div.innerHTML;
+    },
+
+    // ============================================
+    // Update Modal Functions
+    // ============================================
+
+    /** Currently open modal overlay */
+    currentModalOverlay: null,
+
+    /** Cached updates for games */
+    gameUpdatesCache: {},
+
+    /**
+     * Show update modal for a game
+     * @param {Object} game - Game object
+     * @param {Array} updates - Updates to display
+     */
+    showUpdateModal(game, updates) {
+        // Remove any existing modal
+        this.closeUpdateModal();
+
+        // Create modal overlay
+        const overlay = document.createElement('div');
+        overlay.className = 'update-modal-overlay';
+
+        // Get badge text helper
+        const getBadgeText = (type) => {
+            const badges = { patch: 'Patch', dlc: 'DLC', release: 'Release', news: 'News' };
+            return badges[type] || 'News';
+        };
+
+        // Build updates HTML
+        let updatesHtml = '';
+        if (updates && updates.length > 0) {
+            updatesHtml = updates.map(update => `
+                <div class="update-modal__item">
+                    <div class="update-modal__item-header">
+                        <span class="update-modal__item-badge update-modal__item-badge--${update.type}">
+                            ${getBadgeText(update.type)}
+                        </span>
+                        <span class="update-modal__item-date">${this.formatRelativeTime(update.date)}</span>
+                    </div>
+                    <h4 class="update-modal__item-title">${this.escapeHtml(update.title)}</h4>
+                    ${update.content ? `<p class="update-modal__item-content">${this.escapeHtml(update.content)}</p>` : ''}
+                </div>
+            `).join('');
+        } else {
+            updatesHtml = `
+                <div class="update-modal__empty">
+                    <div class="update-modal__empty-icon">✓</div>
+                    <p class="update-modal__empty-text">No new updates for this game</p>
+                </div>
+            `;
+        }
+
+        overlay.innerHTML = `
+            <div class="update-modal">
+                <div class="update-modal__handle"></div>
+                <div class="update-modal__header">
+                    <img class="update-modal__game-image" src="${game.image}" alt="${this.escapeHtml(game.name)}" loading="lazy">
+                    <div class="update-modal__game-info">
+                        <h3 class="update-modal__game-name">${this.escapeHtml(game.name)}</h3>
+                        <p class="update-modal__game-meta">${updates?.length || 0} update${updates?.length !== 1 ? 's' : ''}</p>
+                    </div>
+                </div>
+                <div class="update-modal__content">
+                    ${updatesHtml}
+                </div>
+            </div>
+        `;
+
+        document.body.appendChild(overlay);
+        this.currentModalOverlay = overlay;
+
+        // Animate in
+        requestAnimationFrame(() => {
+            overlay.classList.add('visible');
+        });
+
+        // Close on overlay click (not modal itself)
+        overlay.addEventListener('click', (e) => {
+            if (e.target === overlay) {
+                this.closeUpdateModal(game.id);
+            }
+        });
+
+        // Prevent modal content clicks from closing
+        overlay.querySelector('.update-modal').addEventListener('click', (e) => {
+            e.stopPropagation();
+        });
+    },
+
+    /**
+     * Close update modal
+     * @param {number} gameId - Game ID to mark as read (optional)
+     */
+    closeUpdateModal(gameId = null) {
+        if (this.currentModalOverlay) {
+            this.currentModalOverlay.classList.remove('visible');
+
+            // Mark as read if gameId provided
+            if (gameId) {
+                Storage.markUpdatesAsRead(gameId);
+            }
+
+            setTimeout(() => {
+                if (this.currentModalOverlay) {
+                    this.currentModalOverlay.remove();
+                    this.currentModalOverlay = null;
+                }
+
+                // Re-render highlights to update indicators
+                if (gameId && this.currentView === 'timeline') {
+                    this.renderGameHighlights(Storage.getSavedGames());
+                }
+            }, 400);
+        }
+    },
+
+    /**
+     * Open update modal for a game from highlight or carousel
+     * @param {Object} game - Game object
+     */
+    async openGameUpdateModal(game) {
+        // Show loading state
+        this.showLoading(true);
+
+        try {
+            // Check cache first
+            let updates = this.gameUpdatesCache[game.id];
+
+            if (!updates) {
+                // Fetch updates for this game
+                const allUpdates = await API.getRecentUpdatesForGames([game], 10);
+                updates = allUpdates.filter(u => u.game.id === game.id);
+                this.gameUpdatesCache[game.id] = updates;
+            }
+
+            this.showLoading(false);
+            this.showUpdateModal(game, updates);
+
+        } catch (error) {
+            console.error('Error loading updates:', error);
+            this.showLoading(false);
+            this.showToast('Failed to load updates', 'error');
+        }
     }
 };
 
