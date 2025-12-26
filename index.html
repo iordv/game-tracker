@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
+    <meta name="theme-color" content="#0a0a0f">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="GameTracker">
+    <meta name="description" content="Track your favorite games, updates, patches and DLC">
+
+    <title>GameTracker</title>
+
+    <link rel="manifest" href="manifest.json">
+    <link rel="apple-touch-icon" href="assets/icons/icon-192.png">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles/index.css">
+</head>
+
+<body>
+    <!-- App Container -->
+    <div id="app">
+        <!-- Dynamic Background -->
+        <div class="dynamic-bg" id="dynamicBg"></div>
+
+        <!-- Main Content Area -->
+        <main class="main-content" id="mainContent">
+            <!-- Home View -->
+            <section class="view view--home active" id="homeView">
+                <!-- Hero Carousel for Recent Updates -->
+                <div class="hero-carousel" id="heroCarousel">
+                    <div class="hero-carousel__track" id="heroCarouselTrack">
+                        <!-- Slides will be dynamically inserted -->
+                    </div>
+                    <div class="hero-carousel__dots" id="heroCarouselDots">
+                        <!-- Dots will be dynamically inserted -->
+                    </div>
+                </div>
+
+                <!-- Your Favorites Section (Pinned Games) -->
+                <div class="favorites-section hidden" id="favoritesSection">
+                    <h2 class="section-title">
+                        <svg class="section-title__icon" viewBox="0 0 24 24" fill="currentColor">
+                            <polygon
+                                points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+                        </svg>
+                        Your Favorites
+                    </h2>
+                    <div class="games-grid" id="favoritesGrid">
+                        <!-- Pinned games will be inserted here -->
+                    </div>
+                </div>
+
+                <!-- All Your Games Section -->
+                <div class="all-games-section" id="allGamesSection">
+                    <h2 class="section-title">All Your Games</h2>
+                    <div class="games-grid" id="allGamesGrid">
+                        <!-- All saved games will be inserted here -->
+                    </div>
+                </div>
+
+                <div class="empty-state" id="emptyState">
+                    <div class="empty-state__icon">🎮</div>
+                    <h2 class="empty-state__title">No games yet</h2>
+                    <p class="empty-state__text">Search for your favorite games and save them to track updates.</p>
+                    <button class="btn btn--primary" id="emptySearchBtn">
+                        <svg class="btn__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="11" cy="11" r="8" />
+                            <path d="m21 21-4.35-4.35" />
+                        </svg>
+                        Search Games
+                    </button>
+                </div>
+            </section>
+
+            <!-- Search View -->
+            <section class="view view--search" id="searchView">
+                <header class="view-header">
+                    <h1 class="view-title">Search Games</h1>
+                    <p class="view-subtitle">Find your next favorite</p>
+                </header>
+
+                <div class="search-results" id="searchResults">
+                    <!-- Search results will be dynamically inserted here -->
+                </div>
+
+                <div class="search-trending" id="searchTrending">
+                    <h2 class="section-title">Trending Games</h2>
+                    <div class="trending-grid" id="trendingGrid">
+                        <!-- Trending games will be loaded here -->
+                    </div>
+                </div>
+            </section>
+
+            <!-- Timeline View -->
+            <section class="view view--timeline" id="timelineView">
+                <header class="view-header">
+                    <h1 class="view-title">Timeline</h1>
+                    <p class="view-subtitle">Recent updates from your games</p>
+                </header>
+
+                <div class="timeline-feed" id="timelineFeed">
+                    <!-- Timeline entries will be dynamically inserted -->
+                </div>
+
+                <div class="timeline-empty" id="timelineEmpty">
+                    <div class="empty-state__icon">📰</div>
+                    <h2 class="empty-state__title">No updates yet</h2>
+                    <p class="empty-state__text">Save some games to see their recent patches and DLC here.</p>
+                </div>
+            </section>
+
+            <!-- Game Detail View -->
+            <section class="view view--detail" id="detailView">
+                <div class="detail-hero" id="detailHero">
+                    <div class="detail-hero__bg" id="detailHeroBg"></div>
+                    <div class="detail-hero__overlay"></div>
+                    <div class="detail-hero__content">
+                        <button class="back-btn glass-material" id="backBtn">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                                <path d="m15 18-6-6 6-6" />
+                            </svg>
+                        </button>
+                        <div class="detail-hero__info">
+                            <h1 class="detail-hero__title" id="detailTitle">Game Title</h1>
+                            <p class="detail-hero__meta" id="detailMeta">Developer • 2024</p>
+                        </div>
+                        <button class="save-btn" id="saveBtn" aria-label="Save game">
+                            <svg class="save-btn__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2">
+                                <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" />
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="detail-content">
+                    <!-- Tab Navigation -->
+                    <nav class="detail-tabs glass-material">
+                        <button class="detail-tab active" data-tab="updates">Updates</button>
+                        <button class="detail-tab" data-tab="dlc">DLC</button>
+                        <button class="detail-tab" data-tab="about">About</button>
+                    </nav>
+
+                    <!-- Tab Content -->
+                    <div class="tab-content active" id="tabUpdates">
+                        <div class="updates-list" id="updatesList">
+                            <!-- Updates will be loaded here -->
+                        </div>
+                    </div>
+
+                    <div class="tab-content" id="tabDlc">
+                        <div class="dlc-list" id="dlcList">
+                            <!-- DLC will be loaded here -->
+                        </div>
+                    </div>
+
+                    <div class="tab-content" id="tabAbout">
+                        <div class="about-section" id="aboutSection">
+                            <!-- About content will be loaded here -->
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </main>
+
+        <!-- Floating Navigation Dock -->
+        <div class="nav-dock-container" id="navDock">
+            <!-- Main Dock - morphs between navigation and search -->
+            <nav class="nav-dock glass-material" id="navDockMain">
+                <!-- Navigation Buttons (visible when not searching) -->
+                <div class="nav-dock__buttons" id="navDockButtons">
+                    <button class="nav-dock__btn active" data-view="home" aria-label="Home">
+                        <svg class="nav-dock__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2">
+                            <path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+                            <polyline points="9,22 9,12 15,12 15,22" />
+                        </svg>
+                        <span class="nav-dock__label">Home</span>
+                    </button>
+                    <button class="nav-dock__btn" data-view="timeline" aria-label="Timeline">
+                        <svg class="nav-dock__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2">
+                            <circle cx="12" cy="12" r="10" />
+                            <polyline points="12,6 12,12 16,14" />
+                        </svg>
+                        <span class="nav-dock__label">Timeline</span>
+                    </button>
+                </div>
+                <!-- Search Input (visible when searching) -->
+                <div class="nav-dock__search" id="navDockSearch">
+                    <svg class="nav-dock__search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                        stroke-width="2">
+                        <circle cx="11" cy="11" r="8" />
+                        <path d="m21 21-4.35-4.35" />
+                    </svg>
+                    <input type="text" class="nav-dock__input" id="dockSearchInput" placeholder="Search games..."
+                        autocomplete="off" autocorrect="off" spellcheck="false">
+                </div>
+            </nav>
+            <!-- Action Button - morphs between search and back -->
+            <button class="nav-action-btn glass-material" id="navActionBtn" aria-label="Search">
+                <svg class="nav-action-btn__icon nav-action-btn__icon--search" viewBox="0 0 24 24" fill="none"
+                    stroke="currentColor" stroke-width="2.5">
+                    <circle cx="11" cy="11" r="8" />
+                    <path d="m21 21-4.35-4.35" />
+                </svg>
+                <svg class="nav-action-btn__icon nav-action-btn__icon--back" viewBox="0 0 24 24" fill="none"
+                    stroke="currentColor" stroke-width="2.5">
+                    <path d="m15 18-6-6 6-6" />
+                </svg>
+            </button>
+        </div>
+
+        <!-- Loading Overlay -->
+        <div class="loading-overlay" id="loadingOverlay">
+            <div class="loading-spinner"></div>
+        </div>
+
+        <!-- Toast Notifications -->
+        <div class="toast-container" id="toastContainer"></div>
+    </div>
+
+    <script src="js/api.js"></script>
+    <script src="js/storage.js"></script>
+    <script src="js/animations.js"></script>
+    <script src="js/ui.js"></script>
+    <script src="js/app.js"></script>
+</body>
+
+</html>
