@@ -696,8 +696,8 @@ const UI = {
                     const updateIndex = parseInt(slide.dataset.updateIndex);
                     const update = this.carouselUpdates[updateIndex];
                     if (update) {
-                        // Show modal with just this update
-                        this.showUpdateModal(update.game, [update]);
+                        // Show modal with just this single update (no header)
+                        this.showSingleUpdateModal(update.game, update);
                     }
                 });
             });
@@ -1366,6 +1366,9 @@ const UI = {
     /** Currently open modal overlay */
     currentModalOverlay: null,
 
+    /** Flag to prevent double-triggering */
+    isModalAnimating: false,
+
     /** Cached updates for games */
     gameUpdatesCache: {},
 
@@ -1374,9 +1377,17 @@ const UI = {
      * @param {Object} game - Game object
      * @param {Array} updates - Updates to display
      */
-    showUpdateModal(game, updates) {
-        // Remove any existing modal
-        this.closeUpdateModal();
+    showUpdateModal(game, updates, singleUpdate = false) {
+        // Prevent double-triggering during animation
+        if (this.isModalAnimating) return;
+
+        // If modal already open, remove it immediately
+        if (this.currentModalOverlay) {
+            this.currentModalOverlay.remove();
+            this.currentModalOverlay = null;
+        }
+
+        this.isModalAnimating = true;
 
         // Create modal overlay
         const overlay = document.createElement('div');
@@ -1388,21 +1399,80 @@ const UI = {
             return badges[type] || 'News';
         };
 
-        // Build updates HTML
+        // Generate random engagement numbers for demo
+        const getEngagement = (updateId) => {
+            // Generate random numbers based on hash of updateId
+            const hash = String(updateId).split('').reduce((a, b) => {
+                a = ((a << 5) - a) + b.charCodeAt(0);
+                return a & a;
+            }, 0);
+            return {
+                likes: Math.abs(hash % 5000) + 200,
+                comments: Math.abs(hash % 300) + 10,
+                liked: false
+            };
+        };
+
+        // Generate sample comments
+        const getComments = () => {
+            const sampleComments = [
+                { user: 'GameFan92', text: 'This update is amazing! Can\'t wait to try it out.', time: '2h ago' },
+                { user: 'ProGamer', text: 'Finally they fixed that bug I reported!', time: '4h ago' },
+                { user: 'CasualPlayer', text: 'Looking forward to the new content 🎮', time: '5h ago' },
+                { user: 'StreamerX', text: 'Going to be streaming this tonight!', time: '6h ago' },
+                { user: 'Reviewer101', text: 'Great improvements overall. Solid update.', time: '1d ago' }
+            ];
+            const count = Math.floor(Math.random() * 3) + 2;
+            return sampleComments.slice(0, count);
+        };
+
+        // Build updates HTML with full content and interactive engagement
         let updatesHtml = '';
         if (updates && updates.length > 0) {
-            updatesHtml = updates.map(update => `
-                <div class="update-modal__item">
-                    <div class="update-modal__item-header">
-                        <span class="update-modal__item-badge update-modal__item-badge--${update.type}">
-                            ${getBadgeText(update.type)}
-                        </span>
-                        <span class="update-modal__item-date">${this.formatRelativeTime(update.date)}</span>
+            updatesHtml = updates.map((update, idx) => {
+                const updateId = update.id || idx;
+                const engagement = getEngagement(updateId);
+                const comments = getComments();
+
+                const commentsHtml = comments.map(c => `
+                    <div class="update-modal__comment">
+                        <span class="update-modal__comment-user">${c.user}</span>
+                        <span class="update-modal__comment-text">${c.text}</span>
+                        <span class="update-modal__comment-time">${c.time}</span>
                     </div>
-                    <h4 class="update-modal__item-title">${this.escapeHtml(update.title)}</h4>
-                    ${update.content ? `<p class="update-modal__item-content">${this.escapeHtml(update.content)}</p>` : ''}
-                </div>
-            `).join('');
+                `).join('');
+
+                return `
+                    <div class="update-modal__item" data-update-id="${updateId}">
+                        <div class="update-modal__item-header">
+                            <span class="update-modal__item-badge update-modal__item-badge--${update.type}">
+                                ${getBadgeText(update.type)}
+                            </span>
+                            <span class="update-modal__item-date">${this.formatRelativeTime(update.date)}</span>
+                        </div>
+                        <h4 class="update-modal__item-title">${this.escapeHtml(update.title)}</h4>
+                        ${update.content ? `<div class="update-modal__item-content">${this.escapeHtml(update.content)}</div>` : ''}
+                        <div class="update-modal__item-engagement">
+                            <button class="update-modal__like-btn" data-update-id="${updateId}" data-likes="${engagement.likes}">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
+                                </svg>
+                                <span class="like-count">${this.formatNumber(engagement.likes)}</span>
+                            </button>
+                            <button class="update-modal__comments-btn" data-update-id="${updateId}">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/>
+                                </svg>
+                                <span>${comments.length} comments</span>
+                            </button>
+                        </div>
+                        <div class="update-modal__comments-section hidden">
+                            <h5 class="update-modal__comments-title">Comments</h5>
+                            ${commentsHtml}
+                        </div>
+                    </div>
+                `;
+            }).join('');
         } else {
             updatesHtml = `
                 <div class="update-modal__empty">
@@ -1412,16 +1482,21 @@ const UI = {
             `;
         }
 
-        overlay.innerHTML = `
-            <div class="update-modal">
-                <div class="update-modal__handle"></div>
-                <div class="update-modal__header">
-                    <img class="update-modal__game-image" src="${game.image}" alt="${this.escapeHtml(game.name)}" loading="lazy">
-                    <div class="update-modal__game-info">
-                        <h3 class="update-modal__game-name">${this.escapeHtml(game.name)}</h3>
-                        <p class="update-modal__game-meta">${updates?.length || 0} update${updates?.length !== 1 ? 's' : ''}</p>
-                    </div>
+        // Build header (hide for single update from carousel)
+        const headerHtml = singleUpdate ? '' : `
+            <div class="update-modal__header">
+                <img class="update-modal__game-image" src="${game.image}" alt="${this.escapeHtml(game.name)}" loading="lazy">
+                <div class="update-modal__game-info">
+                    <h3 class="update-modal__game-name">${this.escapeHtml(game.name)}</h3>
+                    <p class="update-modal__game-meta">${updates?.length || 0} update${updates?.length !== 1 ? 's' : ''}</p>
                 </div>
+            </div>
+        `;
+
+        overlay.innerHTML = `
+            <div class="update-modal ${singleUpdate ? 'update-modal--single' : ''}">
+                <div class="update-modal__handle"></div>
+                ${headerHtml}
                 <div class="update-modal__content">
                     ${updatesHtml}
                 </div>
@@ -1431,9 +1506,12 @@ const UI = {
         document.body.appendChild(overlay);
         this.currentModalOverlay = overlay;
 
-        // Animate in
+        // Animate in after two frames to ensure DOM is ready
         requestAnimationFrame(() => {
-            overlay.classList.add('visible');
+            requestAnimationFrame(() => {
+                overlay.classList.add('visible');
+                this.isModalAnimating = false;
+            });
         });
 
         // Close on overlay click (not modal itself)
@@ -1447,6 +1525,54 @@ const UI = {
         overlay.querySelector('.update-modal').addEventListener('click', (e) => {
             e.stopPropagation();
         });
+
+        // Like button handlers
+        overlay.querySelectorAll('.update-modal__like-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const isLiked = btn.classList.toggle('liked');
+                const likesEl = btn.querySelector('.like-count');
+                let likes = parseInt(btn.dataset.likes);
+
+                if (isLiked) {
+                    likes++;
+                    btn.querySelector('svg').style.fill = 'currentColor';
+                    // Haptic feedback
+                    if (navigator.vibrate) navigator.vibrate(30);
+                } else {
+                    likes--;
+                    btn.querySelector('svg').style.fill = 'none';
+                }
+
+                btn.dataset.likes = likes;
+                likesEl.textContent = this.formatNumber(likes);
+
+                // Bounce animation
+                btn.style.transform = 'scale(1.2)';
+                setTimeout(() => {
+                    btn.style.transform = '';
+                }, 150);
+            });
+        });
+
+        // Comments button handlers - toggle comments section
+        overlay.querySelectorAll('.update-modal__comments-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const item = btn.closest('.update-modal__item');
+                const commentsSection = item.querySelector('.update-modal__comments-section');
+
+                if (commentsSection) {
+                    commentsSection.classList.toggle('hidden');
+                    btn.classList.toggle('active');
+
+                    // Smooth scroll to show comments
+                    if (!commentsSection.classList.contains('hidden')) {
+                        commentsSection.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                    }
+                }
+            });
+        });
     },
 
     /**
@@ -1454,7 +1580,8 @@ const UI = {
      * @param {number} gameId - Game ID to mark as read (optional)
      */
     closeUpdateModal(gameId = null) {
-        if (this.currentModalOverlay) {
+        if (this.currentModalOverlay && !this.isModalAnimating) {
+            this.isModalAnimating = true;
             this.currentModalOverlay.classList.remove('visible');
 
             // Mark as read if gameId provided
@@ -1462,11 +1589,14 @@ const UI = {
                 Storage.markUpdatesAsRead(gameId);
             }
 
+            const overlay = this.currentModalOverlay;
+            this.currentModalOverlay = null;
+
             setTimeout(() => {
-                if (this.currentModalOverlay) {
-                    this.currentModalOverlay.remove();
-                    this.currentModalOverlay = null;
+                if (overlay && overlay.parentNode) {
+                    overlay.remove();
                 }
+                this.isModalAnimating = false;
 
                 // Re-render highlights to update indicators
                 if (gameId && this.currentView === 'timeline') {
@@ -1481,6 +1611,9 @@ const UI = {
      * @param {Object} game - Game object
      */
     async openGameUpdateModal(game) {
+        // Prevent if animating
+        if (this.isModalAnimating) return;
+
         // Show loading state
         this.showLoading(true);
 
@@ -1496,13 +1629,23 @@ const UI = {
             }
 
             this.showLoading(false);
-            this.showUpdateModal(game, updates);
+            this.showUpdateModal(game, updates, false);
 
         } catch (error) {
             console.error('Error loading updates:', error);
             this.showLoading(false);
             this.showToast('Failed to load updates', 'error');
         }
+    },
+
+    /**
+     * Open update modal for a single update (from carousel)
+     * @param {Object} game - Game object
+     * @param {Object} update - Single update to show
+     */
+    showSingleUpdateModal(game, update) {
+        if (this.isModalAnimating) return;
+        this.showUpdateModal(game, [update], true);
     }
 };
 

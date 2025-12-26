@@ -113,31 +113,51 @@ const Animations = {
     },
 
     /**
-     * Staggered fade in for lists
+     * Staggered fade in for lists - optimized for no flash
      * @param {NodeList|Array} elements - Elements to animate
      * @param {number} stagger - Stagger delay in ms
      * @param {number} duration - Duration per item in ms
      */
-    staggerFadeIn(elements, stagger = 50, duration = 300) {
+    staggerFadeIn(elements, stagger = 30, duration = 200) {
         const items = Array.from(elements);
 
+        // Skip if no items or already animated
+        if (!items.length) return Promise.resolve();
+
+        // Check if already visible (avoid re-animation on re-render)
+        const firstItem = items[0];
+        if (firstItem.dataset.animated === 'true') {
+            return Promise.resolve();
+        }
+
+        // Apply initial state via class for instant hide
         items.forEach((el, index) => {
             el.style.opacity = '0';
-            el.style.transform = 'translateY(15px)';
+            el.style.transform = 'translateY(10px)';
+            el.style.transition = `opacity ${duration}ms ease-out, transform ${duration}ms ease-out`;
+            el.style.transitionDelay = `${index * stagger}ms`;
         });
 
-        requestAnimationFrame(() => {
-            items.forEach((el, index) => {
-                setTimeout(() => {
-                    el.style.transition = `opacity ${duration}ms ease-out, transform ${duration}ms ease-out`;
-                    el.style.opacity = '1';
-                    el.style.transform = 'translateY(0)';
-                }, index * stagger);
-            });
+        // Force reflow then animate
+        void firstItem.offsetHeight;
+
+        // Start animation immediately
+        items.forEach((el) => {
+            el.style.opacity = '1';
+            el.style.transform = 'translateY(0)';
+            el.dataset.animated = 'true';
         });
 
+        // Clean up transitions after animation completes
+        const totalDuration = items.length * stagger + duration;
         return new Promise(resolve => {
-            setTimeout(resolve, items.length * stagger + duration);
+            setTimeout(() => {
+                items.forEach(el => {
+                    el.style.transition = '';
+                    el.style.transitionDelay = '';
+                });
+                resolve();
+            }, totalDuration);
         });
     },
 

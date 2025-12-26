@@ -2369,6 +2369,120 @@ body {
   line-height: 1.6;
 }
 
+/* Engagement stats */
+.update-modal__item-engagement {
+  display: flex;
+  align-items: center;
+  gap: var(--space-lg);
+  margin-top: var(--space-md);
+  padding-top: var(--space-md);
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+/* Interactive like/comments buttons */
+.update-modal__like-btn,
+.update-modal__comments-btn {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  background: transparent;
+  border: none;
+  padding: 8px 12px;
+  border-radius: var(--radius-lg);
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.update-modal__like-btn:active,
+.update-modal__comments-btn:active {
+  transform: scale(0.95);
+}
+
+.update-modal__like-btn svg,
+.update-modal__comments-btn svg {
+  width: 18px;
+  height: 18px;
+  transition: all 0.2s ease;
+}
+
+.update-modal__like-btn.liked {
+  color: #ff6b6b;
+}
+
+.update-modal__like-btn.liked svg {
+  fill: #ff6b6b;
+  stroke: #ff6b6b;
+}
+
+.update-modal__comments-btn.active {
+  color: var(--accent-primary);
+}
+
+/* Comments section */
+.update-modal__comments-section {
+  margin-top: var(--space-md);
+  padding-top: var(--space-md);
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.update-modal__comments-section.hidden {
+  display: none;
+}
+
+.update-modal__comments-title {
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: var(--space-md);
+}
+
+.update-modal__comment {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: var(--space-sm) 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+.update-modal__comment:last-child {
+  border-bottom: none;
+}
+
+.update-modal__comment-user {
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  color: var(--accent-primary);
+}
+
+.update-modal__comment-text {
+  font-size: var(--font-size-sm);
+  color: var(--text-primary);
+  line-height: 1.5;
+}
+
+.update-modal__comment-time {
+  font-size: var(--font-size-xs);
+  color: var(--text-tertiary);
+}
+
+/* Single update mode (from carousel) */
+.update-modal--single {
+  max-height: 60vh;
+}
+
+.update-modal--single .update-modal__content {
+  padding-top: var(--space-md);
+}
+
+.update-modal--single .update-modal__item {
+  background: transparent;
+  border: none;
+  padding: 0;
+}
+
 /* Empty state */
 .update-modal__empty {
   text-align: center;
